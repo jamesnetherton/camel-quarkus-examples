@@ -20,16 +20,18 @@
 examples-1:
   - file-bindy-ftp
   - file-split-log-xml
-  - health
 examples-2:
+  - health
   - http-log
+examples-3:
   - observability
   - rest-json
-examples-3:
+examples-4:
   - timer-log
   - timer-log-cdi
+examples-5:
   - timer-log-kotlin
-examples-4:
   - timer-log-main
+examples-6:
   - timer-log-spring
   - timer-log-xml
