@@ -43,9 +43,11 @@ env:
   LANG: en_US.UTF-8
   MAVEN_OPTS: -Xmx3000m
   MAVEN_ARGS: -V -ntp -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -e
+  TESTCONTAINERS_RYUK_DISABLED: true
 
 jobs:
   initial-mvn-install:
+    if: github.repository == 'jamesnetherton/camel-quarkus-examples'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-itest-matrix.outputs.matrix }}

@@ -17,21 +17,21 @@
 #
 
 # Association of categories and camel-quarkus-examples maven modules. Used by GitHub workflows.
-examples-1:
+examples-file:
   - file-bindy-ftp
   - file-split-log-xml
-examples-2:
+examples-observability:
   - health
-  - http-log
-examples-3:
   - observability
+examples-http:
+  - http-log
   - rest-json
-examples-4:
+examples-timer-log-1:
   - timer-log
   - timer-log-cdi
-examples-5:
+examples-timer-log-2:
   - timer-log-kotlin
   - timer-log-main
-examples-6:
+examples-timer-log-3:
   - timer-log-spring
   - timer-log-xml
