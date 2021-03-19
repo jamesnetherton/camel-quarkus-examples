@@ -109,7 +109,7 @@ jobs:
           echo "::set-output name=matrix::{'category': [${CATEGORIES}]}"
 
   integration-tests:
-    name: Integration Tests - ${{matrix.modules}}
+    name: Integration Tests - ${{matrix.category}}
     needs: initial-mvn-install
     runs-on: ubuntu-latest
     strategy:
@@ -142,16 +142,7 @@ jobs:
             if [ "${EXAMPLE}" == "-" ]; then
               continue
             fi
-            EXAMPLE_PROJECTS="${EXAMPLE_PROJECTS} ${EXAMPLE}"
-          done
 
-          EXAMPLE_PROJECTS=$(echo ${EXAMPLE_PROJECTS} | sed 's/^[ \t]*//;s/[ \t]*$//')
-          if [ -z "${EXAMPLE_PROJECTS}" ]; then
-            echo "No example projects were found for category ${{ matrix.category }}"
-            exit 1
-          fi
-
-          for EXAMPLE in $EXAMPLE_PROJECTS
             ./mvnw ${MAVEN_ARGS} clean verify \
               -Dformatter.skip -Dimpsort.skip -Denforcer.skip \
               -Pnative,docker \
