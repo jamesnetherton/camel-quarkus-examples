@@ -60,7 +60,7 @@ jobs:
           git clone --depth 1 --branch master https://github.com/apache/camel-quarkus.git ${{ runner.temp }}/camel-quarkus \
             && cd ${{ runner.temp }}/camel-quarkus \
             && echo "Current Camel Quarkus commit:" $(git rev-parse HEAD) \
-            && ./mvnw ${MAVEN_ARGS} clean install -DskipTests -Denforcer.skip -Dquarkus.build.skip
+            && ./mvnw ${MAVEN_ARGS} clean install -Dquickly
       - name: mvn license:check formatter:validate impsort:check cq:sync-example-properties
         run: |
           ./mvnw-for-each.sh ${MAVEN_ARGS} \
@@ -68,10 +68,68 @@ jobs:
             net.revelc.code.formatter:formatter-maven-plugin:validate \
             net.revelc.code:impsort-maven-plugin:check \
             org.l2x6.cq:cq-maven-plugin:0.25.0:sync-example-properties
-      - name: mvn clean verify -Pnative,docker
+      - name: Validate test categories YAML
         run: |
-          ./mvnw-for-each.sh ${MAVEN_ARGS} clean verify -Pnative,docker
+          VALID=true
+          for EXAMPLE in $(dirname $(grep -l "camel-quarkus-examples-" $(find . -name pom.xml)) | cut -f2 -d'/'); do
+            if ! grep ${EXAMPLE} .github/test-categories.yaml > /dev/null; then
+              echo "Project ${EXAMPLE} is not listed in .github/test-categories.yaml"
+              VALID=false
+            fi
+          done
+
+          if [[ ${VALID} != "true" ]]; then
+            exit 1
+          fi
+      - name: Build Camel Quarkus Examples
+        run: |
+          ./mvnw-for-each.sh ${MAVEN_ARGS} clean install -DskipTests
       - name: Fail if there are uncommitted changes
         shell: bash
         run: |
           [[ -z $(git status --porcelain) ]] || { echo 'There are uncommitted changes'; git status; exit 1; }
+      - name: Tar Maven Repo
+        shell: bash
+        run: |
+          tar -czf ${{ runner.temp }}/maven-repo.tgz -C ~ .m2/repository
+      - name: Persist Maven Repo
+        uses: actions/upload-artifact@v2
+        with:
+          name: maven-repo
+          path: ${{ runner.temp }}/maven-repo.tgz
+          retention-days: 1
+      - name: Setup Native Test Matrix
+        id: set-native-matrix
+        run: |
+          EXAMPLES=$(find . -name pom.xml -printf '"%h",' | sed 's/\.\///g')
+          TEST_MODULES=$(echo "${EXAMPLES%?}")
+          echo "::set-output name=matrix::{'modules': [${TEST_MODULES}]}"
+
+  native-tests:
+    name: Integration Tests - ${{matrix.modules}}
+    needs: initial-mvn-install
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.initial-mvn-install.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up JDK 11
+        uses: AdoptOpenJDK/install-jdk@v1
+        with:
+          version: '11'
+      - name: Download Maven Repo
+        uses: actions/download-artifact@v2
+        with:
+          name: maven-repo
+          path: ..
+      - name: Extract Maven Repo
+        shell: bash
+        run: |
+          tar -xzf ../maven-repo.tgz -C ~
+      - name: Integration Tests
+        run: |
+          ./mvnw ${MAVEN_ARGS} clean verify \
+            -Pnative,docker \
+            -f "${{ matrix.modules }}/pom.xml"
