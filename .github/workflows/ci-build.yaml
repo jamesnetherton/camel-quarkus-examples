@@ -45,7 +45,7 @@ env:
   MAVEN_ARGS: -V -ntp -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -e
 
 jobs:
-  mvn-verify:
+  initial-mvn-install:
     runs-on: ubuntu-latest
     steps:
       - name: Set up JDK 11
