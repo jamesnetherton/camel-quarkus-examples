@@ -47,6 +47,8 @@ env:
 jobs:
   initial-mvn-install:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-itest-matrix.outputs.matrix }}
     steps:
       - name: Set up JDK 11
         uses: AdoptOpenJDK/install-jdk@v1
@@ -98,15 +100,15 @@ jobs:
           name: maven-repo
           path: ${{ runner.temp }}/maven-repo.tgz
           retention-days: 1
-      - name: Setup Native Test Matrix
-        id: set-native-matrix
+      - name: Setup Integration Test Matrix
+        id: set-itest-matrix
         run: |
           sudo wget -O /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/3.2.1/yq_linux_amd64"
           sudo chmod +x /usr/local/bin/yq
           CATEGORIES=$(cat .github/test-categories.yaml | yq r - --printMode p "*." | sed "s/\(.*\)/'\1'/" | sed ':a;N;$!ba;s/\n/,/g')
           echo "::set-output name=matrix::{'category': [${CATEGORIES}]}"
 
-  native-tests:
+  integration-tests:
     name: Integration Tests - ${{matrix.modules}}
     needs: initial-mvn-install
     runs-on: ubuntu-latest
