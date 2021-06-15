@@ -1,1 +1,2 @@
 ARTIFACT_COPY_ARGS=-p -r lib/ *-runner.jar
+MAVEN_ARGS_APPEND=-Dimpsort.skip -Dformatter.skip
