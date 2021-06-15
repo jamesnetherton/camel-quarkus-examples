@@ -121,4 +121,26 @@ $ oc delete all -l app.kubernetes.io/name=camel-quarkus-examples-file-bindy-ftp
 If you need to configure container resource limits & requests, or enable the Quarkus Kubernetes client to trust self signed certificates, you can find these configuration options in `src/main/resources/application.properties`. Simply uncomment them and set your desired values.
 ====
 
+==== Deploying to OpenShift without Maven
+
+To deploy this application via the standard OpenShift S2I workflow, you must first deploy the required FTP server service.
+
+[source,shell]
+----
+$ oc apply -f src/main/kubernetes/openshift.yml
+----
+
+Check pods are running.
+
+[source,shell]
+----
+$ kubectl get pods
+
+NAME                                                     READY     STATUS    RESTARTS   AGE
+ssh-server-deployment-5c667bccfc-52xfz                   1/1       Running   0          21s
+----
+
+Refer to the https://access.redhat.com/documentation/en-us/red_hat_build_of_quarkus/1.11/html/deploying_your_quarkus_applications_on_red_hat_openshift_container_platform/proc-using-s2i-openshift-quarkus_quarkus-openshift[Quarkus S2I documentation] for instructions on how to build and deploy this project with S2I.
+
+
 For more information about deploying Quarkus applications to OpenShift, refer to the https://access.redhat.com/documentation/en-us/red_hat_build_of_quarkus/1.11/html/deploying_your_quarkus_applications_to_openshift/ref-openshift-build-strategies-and-quarkus_quarkus-openshift[documentation].
