@@ -290,6 +290,16 @@
                 <enabled>false</enabled>
             </snapshots>
         </repository>
+        <repository>
+            <id>redhat-earlyaccess-repository-other</id>
+            <url>http://10.0.144.111:8081/repository/maven-public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>        
     </repositories>
     <pluginRepositories>
         <pluginRepository>
@@ -312,6 +322,16 @@
                 <enabled>false</enabled>
             </snapshots>
         </pluginRepository>
+        <pluginRepository>
+            <id>redhat-earlyaccess-repository-other</id>
+            <url>http://10.0.144.111:8081/repository/maven-public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>        
     </pluginRepositories>
 
 </project>
