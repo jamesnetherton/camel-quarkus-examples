@@ -109,7 +109,6 @@ jobs:
           tar -xzf ../maven-repo.tgz -C ~
       - name: Integration Tests
         id: integration-tests
-        continue-on-error: true
         env:
           TEST_MODULES: ${{matrix.tests}}
         shell: '/bin/bash {0}'
@@ -129,7 +128,7 @@ jobs:
 
           if [[ ${#TEST_FAILURES[@]} -gt 0 ]]; then
             echo -e "\n\nBuild errors were encountred in the following projects:\n\n"
-            for FAILURE in ${{ steps.integration-tests.test-failures }}; do
+            for FAILURE in ${TEST_FAILURES[@]}; do
                 echo -e "* ${FAILURE}"
             done
             echo -e "\n\nCheck build logs for further information."
