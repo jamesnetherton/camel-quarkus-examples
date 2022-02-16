@@ -112,7 +112,7 @@ jobs:
         id: integration-tests
         env:
           TEST_MODULES: ${{matrix.tests}}
-        shell: '/bin/bash {0}'
+        shell: '/usr/bin/bash {0}'
         run: |
           TEST_FAILURES=()
 
@@ -128,10 +128,10 @@ jobs:
           done
 
           if [[ ${#TEST_FAILURES[@]} -gt 0 ]]; then
-            echo -e "\n\nBuild errors were encountred in the following projects:\n\n"
+            echo -e "\nBuild errors were encountred in the following projects:\n"
             for FAILURE in ${TEST_FAILURES[@]}; do
-                echo -e "* ${FAILURE}"
+                echo "* ${FAILURE}"
             done
-            echo -e "\n\nCheck build logs for further information."
+            echo -e "\nCheck build logs for further information."
             exit 1
           fi
