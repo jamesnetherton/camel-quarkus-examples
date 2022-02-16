@@ -51,7 +51,7 @@ env:
 
 jobs:
   initial-mvn-install:
-    if: github.repository == 'apache/camel-quarkus-examples'
+    if: github.repository == 'jamesnetherton/camel-quarkus-examples'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-itest-matrix.outputs.matrix }}
