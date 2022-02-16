@@ -134,11 +134,11 @@ jobs:
             echo "::set-output name=test-failures::"
           fi
       - name: Handle Integration Tests Failures
-        if: steps.integration-tests.test-failures != ""
+        if: ${{ steps.integration-tests.test-failures != '' }}
         shell: bash
         run:
           echo -e "\n\nBuild errors were encountred in the following projects:\n\n"
-          for FAILURE in {{ steps.integration-tests.test-failures }}; do
+          for FAILURE in ${{ steps.integration-tests.test-failures }}; do
               echo -e "* ${FAILURE}"
           done
           echo -e "\n\nCheck build logs for further information."
