@@ -33,7 +33,7 @@ public class TimerLogTest {
     public void testTimerLog() {
         await().atMost(10L, TimeUnit.SECONDS).pollDelay(1, TimeUnit.SECONDS).until(() -> {
             String log = new String(Files.readAllBytes(Paths.get("target/quarkus.log")), StandardCharsets.UTF_8);
-            return log.contains("Hello World");
+            return log.contains("Hello Worlds");
         });
     }
 

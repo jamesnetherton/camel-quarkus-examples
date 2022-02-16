@@ -21,7 +21,7 @@ on:
   push:
     branches:
       - main
-      - camel-quarkus-main
+      - ci-testing
     paths-ignore:
       - '**.adoc'
       - 'Jenkinsfile'
@@ -31,7 +31,7 @@ on:
   pull_request:
     branches:
       - main
-      - camel-quarkus-main
+      - ci-testing
     paths-ignore:
       - '**.adoc'
       - 'Jenkinsfile'
@@ -63,28 +63,9 @@ jobs:
           java-version: '11'
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Build Camel Quarkus
-        if: github.ref == 'refs/heads/camel-quarkus-main' || github.base_ref == 'camel-quarkus-main'
-        run: |
-          git clone --depth 1 --branch main https://github.com/apache/camel-quarkus.git ${{ runner.temp }}/camel-quarkus \
-            && cd ${{ runner.temp }}/camel-quarkus \
-            && echo "Current Camel Quarkus commit:" $(git rev-parse HEAD) \
-            && ./mvnw ${MAVEN_ARGS} clean install -Dquickly
-      - name: mvn cq:examples-check-platform
-        run: mvn org.l2x6.cq:cq-maven-plugin:2.10.0:examples-check-platform
-      - name: mvn ${MAVEN_ARGS} license:check formatter:validate impsort:check
-        run: |
-          ./mvnw-for-each.sh ${MAVEN_ARGS} \
-            license:check \
-            net.revelc.code.formatter:formatter-maven-plugin:validate \
-            net.revelc.code:impsort-maven-plugin:check
       - name: Build Camel Quarkus Examples
         run: |
           ./mvnw-for-each.sh ${MAVEN_ARGS} clean install -DskipTests -Dquarkus.build.skip
-      - name: Fail if there are uncommitted changes
-        shell: bash
-        run: |
-          [[ -z $(git status --porcelain) ]] || { echo 'There are uncommitted changes'; git status; exit 1; }
       - name: Tar Maven Repo
         shell: bash
         run: |
@@ -127,51 +108,31 @@ jobs:
         run: |
           tar -xzf ../maven-repo.tgz -C ~
       - name: Integration Tests
+        continue-on-error: true
         env:
           TEST_MODULES: ${{matrix.tests}}
         shell: bash
         run: |
+          TEST_FAILURES=()
+          RED=\033[0;31m
+          CLEAR=\033[0m
+
           for MODULE in ${TEST_MODULES//,/ }; do
             ./mvnw ${MAVEN_ARGS} clean verify \
               -Dformatter.skip -Dimpsort.skip \
               -Pnative,docker \
               -f "${MODULE}/pom.xml"
-          done
-      - name: Fail if there are uncommitted changes
-        shell: bash
-        run: |
-          [[ -z $(git status --porcelain) ]] || { echo 'There are uncommitted changes'; git status; exit 1; }
 
-  integration-tests-alternative-platform:
-    name: Integration Tests Alternative Platform - ${{matrix.os}}
-    needs: initial-mvn-install
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: ['windows-latest']
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Set up JDK 11
-        uses: actions/setup-java@v2
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-      - name: Download Maven Repo
-        uses: actions/download-artifact@v2
-        with:
-          name: maven-repo
-          path: ..
-      - name: Extract Maven Repo
-        shell: bash
-        run: |
-          tar -xzf ../maven-repo.tgz -C ~
-      - name: Integration Tests
-        shell: bash
-        run: |
-          ./mvnw-for-each.sh ${MAVEN_ARGS} -Dskip-testcontainers-tests clean verify 
-      - name: Fail if there are uncommitted changes
-        shell: bash
-        run: |
-          [[ -z $(git status --porcelain) ]] || { echo 'There are uncommitted changes'; git status; exit 1; }
+            if [[ $? -ne 0 ]]; then
+              TEST_FAILURES[${#TEST_FAILURES[@]}]=${MODULE}
+            fi
+          done
+
+          if [[ ${#TEST_FAILURES[@]} -gt 0 ]]; then
+            echo -e "\n\n${RED}Build errors were encountred in the following projects:${CLEAR}\n\n"
+            for FAILURE in ${TEST_FAILURES[@]}; do
+                echo -e "* ${RED}${FAILURE}${CLEAR}"
+            done
+            echo -e "\n\n${RED}Check build logs for further information.${CLEAR}"
+            exit 1
+          fi

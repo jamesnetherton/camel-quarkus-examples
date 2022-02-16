@@ -34,7 +34,7 @@ public class HttpLogTest {
     public void testHttpLog() {
         RestAssured.get("/camel/hello")
                 .then()
-                .statusCode(200);
+                .statusCode(404);
 
         await().atMost(10L, TimeUnit.SECONDS).pollDelay(1, TimeUnit.SECONDS).until(() -> {
             String log = new String(Files.readAllBytes(Paths.get("target/quarkus.log")), StandardCharsets.UTF_8);
