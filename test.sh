@@ -33,6 +33,6 @@ CLEAR='\033[0m'
 
 
 
-for i in foo bar cheese; do
-echo -e "$i\n"
+for i in "foo bar cheese"; do
+echo -n "$i\n"
 done
