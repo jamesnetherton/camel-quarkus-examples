@@ -108,14 +108,13 @@ jobs:
         run: |
           tar -xzf ../maven-repo.tgz -C ~
       - name: Integration Tests
+        id: integration-tests
         continue-on-error: true
         env:
           TEST_MODULES: ${{matrix.tests}}
         shell: bash
         run: |
           TEST_FAILURES=()
-          RED=\033[0;31m
-          CLEAR=\033[0m
 
           for MODULE in ${TEST_MODULES//,/ }; do
             ./mvnw ${MAVEN_ARGS} clean verify \
@@ -129,10 +128,19 @@ jobs:
           done
 
           if [[ ${#TEST_FAILURES[@]} -gt 0 ]]; then
-            echo -e "\n\n${RED}Build errors were encountred in the following projects:${CLEAR}\n\n"
-            for FAILURE in ${TEST_FAILURES[@]}; do
-                echo -e "* ${RED}${FAILURE}${CLEAR}"
-            done
-            echo -e "\n\n${RED}Check build logs for further information.${CLEAR}"
+            echo "::set-output name=test-failures::${TEST_FAILURES[@]}"
             exit 1
+          else
+            echo "::set-output name=test-failures::"
           fi
+      - name: Handle Integration Tests Failures
+        if: steps.integration-tests.test-failures != ""
+        shell: bash
+        run:
+          echo -e "\n\nBuild errors were encountred in the following projects:\n\n"
+          for FAILURE in {{ steps.integration-tests.test-failures }}; do
+              echo -e "* ${FAILURE}"
+          done
+          echo -e "\n\nCheck build logs for further information."
+          exit 1
+
