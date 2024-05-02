@@ -25,6 +25,11 @@ updates:
       interval: "daily"
   - package-ecosystem: "maven"
     target-branch: "camel-quarkus-main"
+    groups:
+      maven:
+        applies-to: version-updates
+        patterns:
+        - "*"
     directories:
       - "/aws-lambda"
       - "/cluster-leader-election"
