@@ -1,0 +1,112 @@
+== Camel Quarkus Example Project Sync Utilities
+
+This project provides the means to sync projects from an upstream community branch at `apache/camel-quarkus-examples`.
+
+=== Usage
+
+The project can be run as a Maven build either from the `utils` directory or from the `camel-quarkus-examples` root directory. If you run from the root, then you must append `-f utils/pom.xml` to the command.
+
+To run with the minimum configuration you must provide the version of the Quarkus Platform to be used.
+
+[source,shell]
+----
+mvn verify -Dsync-example-projects -Dquarkus.platform.version=3.8.5.SP1-redhat-00001
+----
+
+If desired, you can provide additional configuration options (see below) to use custom BOM GAVs.
+
+==== How It Works
+
+The source archive for the upstream GitHub branch is downloaded & extracted. The branch name gets determined from the major.minor prefix of `camel-quarkus.examples.version`.
+
+Next, each example project has its runtime dependencies analyzed via `mvn dependency:list`. All dependencies must have a `.redhat` qualifier. Otherwise, the project is ignored and not synchronized back here.
+
+As part of the synchronization process, each project `pom.xml` is modified so that the BOM properties reflect the configuration passed to the build.
+The RedHat GA Maven repositories are also added.
+
+=== Configuration Options
+
+[cols="35,20,5,40"]
+|===
+|Name |Default |Required|Description
+
+|`quarkus.platform.group-id`
+|`com.redhat.quarkus.platform`
+|`false`
+|The `groupId` for the Quarkus BOM
+
+|`quarkus.platform.artifact-id`
+|`quarkus-bom`
+|`false`
+|The `artifactId` for the Quarkus BOM
+
+|`quarkus.platform.version`
+|
+|`true`
+|The `version` for the Quarkus BOM
+
+|`camel-quarkus.platform.group-id`
+|`com.redhat.quarkus.platform`
+|`false`
+|The `groupId` for the Camel Quarkus BOM
+
+|`camel-quarkus.platform.artifact-id`
+|`camel-quarkus-bom`
+|`false`
+|The `artifactId` for the Camel Quarkus BOM
+
+|`camel-quarkus.platform.version`
+|`quarkus.platform.version`
+|`false`
+|The `version` for the Camel Quarkus BOM
+
+|`camel-quarkus.examples.version`
+|
+|`false`
+|The project version to use on each example project that is synchronized.
+
+|`force`
+|
+|`false`
+|Whether to force updating projects if they already exist. This will sync their code with upstream.
+
+|`debug`
+|
+|`false`
+|Outputs additional debugging information.
+
+|`analyzeOnly`
+|
+|`false`
+|Performs only the dependency analysis phase. Does not sync any project code.
+
+|`useCache`
+|
+|`true`
+|Whether to cache the downloaded GitHub source branch archive zip file.
+
+|`selfUpdate`
+|
+|`false`
+|Updates this project pom.xml version properties and performs no further processing.
+
+|`ignoredProjects`
+|
+|
+|A comma separated list of project names to ignore,
+
+|`ignoredDependencies`
+|
+|
+|A comma separated list of project dependencies to ignore from checks if they are productized or not.
+
+|===
+
+=== Transforming Sources
+
+It's possible to apply transformations to sources at two different stages.
+
+1. Pre-processing before example project dependencies are analyzed. This can be useful as a hook to modify aspects of the `pom.xml` beforehand.
+2. Post-processing after project dependencies have been analyzed. The majority of transformations should happen here.
+
+For examples, see the `SourceTransformer` interface and implementations in the `transformer` package.
