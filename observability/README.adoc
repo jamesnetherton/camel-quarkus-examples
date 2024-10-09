@@ -1,0 +1,214 @@
+= Observability: A Camel Quarkus example
+:cq-example-description: An example that demonstrates how to add support for metrics, health checks and distributed tracing
+
+{cq-description}
+
+TIP: Check the https://camel.apache.org/camel-quarkus/latest/first-steps.html[Camel Quarkus User guide] for prerequisites
+and other general information.
+
+== Start in the Development mode
+
+[source,shell]
+----
+$ mvn clean compile quarkus:dev
+----
+
+The above command compiles the project, starts the application and lets the Quarkus tooling watch for changes in your
+workspace. Any modifications in your project will automatically take effect in the running application.
+
+TIP: Please refer to the Development mode section of
+https://camel.apache.org/camel-quarkus/latest/first-steps.html#_development_mode[Camel Quarkus User guide] for more details.
+
+=== Enabling metrics
+
+To enable observability features in Camel Quarkus, we need to add some additional dependencies to the project's pom.xml file.
+The most important one for metrics is `camel-quarkus-micrometer`:
+
+[source, xml]
+----
+<dependency>
+    <groupId>org.apache.camel.quarkus</groupId>
+    <artifactId>camel-quarkus-micrometer</artifactId>
+</dependency>
+----
+
+After adding this dependency, you can benefit from both of the https://camel.apache.org/components/next/micrometer-component.html[Camel Micrometer] and https://quarkus.io/guides/micrometer[Quarkus Micrometer] worlds.
+We are able to use multiple ways of creating meters for our custom metrics.
+
+First using Camel micrometer component (see link:src/main/java/org/acme/observability/Routes.java[Routes.java]):
+
+[source, java]
+----
+.to("micrometer:counter:org.acme.observability.greeting-provider?tags=type=events,purpose=example")
+----
+
+Which will count each call to the `platform-http:/greeting-provider` endpoint.
+
+The second approach is to benefit from CDI dependency injection of the `MeterRegistry`:
+
+[source, java]
+----
+@Inject
+MeterRegistry registry;
+----
+
+Then using it directly in a Camel `Processor` method to publish metrics:
+
+[source, java]
+----
+void countGreeting(Exchange exchange) {
+    registry.counter("org.acme.observability.greeting", "type", "events", "purpose", "example").increment();
+}
+----
+
+[source, java]
+----
+from("platform-http:/greeting")
+    .removeHeaders("*")
+    .process(this::countGreeting)
+----
+
+This counts each call to the `platform-http:/greeting` endpoint.
+
+Finally, the last approach is to use https://quarkus.io/guides/micrometer#does-micrometer-support-annotations[Micrometer annotations], by defining a bean link:src/main/java/org/acme/observability/micrometer/TimerCounter.java[TimerCounter.java] as follows:
+
+[source, java]
+----
+@ApplicationScoped
+@Named("timerCounter")
+public class TimerCounter {
+
+    @Counted(value = "org.acme.observability.timer-counter", extraTags = { "purpose", "example" })
+    public void count() {
+    }
+}
+----
+
+It can then be invoked from Camel via the bean EIP (see link:src/main/java/org/acme/observability/TimerRoute.java[TimerRoute.java]):
+
+[source, java]
+----
+.bean("timerCounter", "count")
+----
+
+It will increment the counter metric each time the Camel timer is fired.
+
+=== Browsing metrics
+
+Metrics are exposed on an HTTP endpoint at `/q/metrics` on port `9000`.
+
+NOTE: Note we are using a different port (9000) for the management endpoint then our application (8080) is listening on.
+This is configured in `applcation.properties` via link:src/main/resources/application.properties#L22[`quarkus.management.enabled = true`]. See the https://quarkus.io/guides/management-interface-reference[Quarkus management interface guide] for more information.
+
+To view all Camel metrics do:
+
+[source,shell]
+----
+$ curl -s localhost:9000/q/metrics
+----
+
+To view only our previously created metrics, use:
+
+[source,shell]
+----
+$ curl -s localhost:9000/q/metrics | grep -i 'purpose="example"'
+----
+
+and you should see 3 lines of different metrics (with the same value, as they are all triggered by the timer).
+
+NOTE: Maybe you've noticed the Prometheus output format. If you would rather use the JSON format, please follow the Quarkus Micrometer management interface https://quarkus.io/guides/micrometer#management-interface[configuration guide].
+
+=== Health endpoint
+
+Camel provides some out of the box liveness and readiness checks. To see this working, interrogate the `/q/health/live` and `/q/health/ready` endpoints on port `9000`:
+
+[source,shell]
+----
+$ curl -s localhost:9000/q/health/live
+----
+
+[source,shell]
+----
+$ curl -s localhost:9000/q/health/ready
+----
+
+The JSON output will contain a checks for verifying whether the `CamelContext` and each individual route is in the 'Started' state.
+
+This example project contains a custom liveness check class `CustomLivenessCheck` and custom readiness check class `CustomReadinessCheck` which leverage the Camel health API.
+You'll see these listed in the health JSON as 'custom-liveness-check' and 'custom-readiness-check'. On every 5th invocation of these checks, the health status of `custom-liveness-check` will be reported as DOWN.
+
+You can also directly leverage MicroProfile Health APIs to create checks. Class `CamelUptimeHealthCheck` demonstrates how to register a readiness check.
+
+=== Tracing
+
+To be able to diagnose problems in Camel Quarkus applications, you can start tracing messages.
+We will use OpenTelemetry standard suited for cloud environments.
+
+All you need is to add the `camel-quarkus-opentelemetry` dependency to your project `pom.xml`:
+
+[source, xml]
+----
+<dependency>
+    <groupId>org.apache.camel.quarkus</groupId>
+    <artifactId>camel-quarkus-opentelemetry</artifactId>
+</dependency>
+----
+
+Then configure the OpenTelemetry exporter in `application.properties`:
+
+[source, text]
+----
+# We are using a property placeholder to be able to test this example in convenient way in a cloud environment
+quarkus.otel.exporter.otlp.traces.endpoint = http://${TELEMETRY_COLLECTOR_COLLECTOR_SERVICE_HOST:localhost}:4317
+----
+
+NOTE: For information about other OpenTelemetry exporters, refer to the Camel Quarkus OpenTelemetry https://camel.apache.org/camel-quarkus/next/reference/extensions/opentelemetry.html#extensions-opentelemetry-usage-exporters[extension documentation].
+
+To view tracing events, start a tracing server. A simple way of doing this is with Docker Compose:
+
+[source,shell]
+----
+$ docker-compose up -d
+----
+
+With the server running, browse to http://localhost:16686. Then choose 'camel-quarkus-observability' from the 'Service' drop down and click the 'Find Traces' button.
+
+The `platform-http` consumer route introduces a random delay to simulate latency, hence the overall time of each trace should be different. When viewing a trace, you should see
+a hierarchy of 6 spans showing the progression of the message exchange through each endpoint.
+
+=== Package and run the application
+
+Once you are done with developing you may want to package and run the application.
+
+TIP: Find more details about the JVM mode and Native mode in the Package and run section of
+https://camel.apache.org/camel-quarkus/latest/first-steps.html#_package_and_run_the_application[Camel Quarkus User guide]
+
+==== JVM mode
+
+[source,shell]
+----
+$ mvn clean package
+$ java -jar target/quarkus-app/quarkus-run.jar
+...
+[io.quarkus] (main) camel-quarkus-examples-... started in 1.163s. Listening on: http://0.0.0.0:8080
+----
+
+==== Native mode
+
+IMPORTANT: Native mode requires having GraalVM and other tools installed. Please check the Prerequisites section
+of https://camel.apache.org/camel-quarkus/latest/first-steps.html#_prerequisites[Camel Quarkus User guide].
+
+To prepare a native executable using GraalVM, run the following command:
+
+[source,shell]
+----
+$ mvn clean package -Pnative
+$ ./target/*-runner
+...
+[io.quarkus] (main) camel-quarkus-examples-... started in 0.013s. Listening on: http://0.0.0.0:8080
+...
+----
+
+== Feedback
+
+Please report bugs and propose improvements via https://github.com/apache/camel-quarkus/issues[GitHub issues of Camel Quarkus] project.

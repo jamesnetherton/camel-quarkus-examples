@@ -1,0 +1,1 @@
+2024-10-09 08:30:25,244 snowblind /Users/james/.sdkman/candidates/java/21.0.3-tem/bin/java[5463] WARN  [io.qua.con.build] (main) The 'quarkus.camel.cluster.file.enabled' config property is deprecated and should not be used anymore

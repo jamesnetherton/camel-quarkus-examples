@@ -22,13 +22,13 @@
 
     <artifactId>camel-quarkus-examples-file-bindy-ftp</artifactId>
     <groupId>org.apache.camel.quarkus.examples</groupId>
-    <version>3.8.0.Final-redhat-00001</version>
+    <version>3.15.0-redhat-00001</version>
 
     <name>Camel Quarkus :: Examples :: File Bindy FTP</name>
     <description>Camel Quarkus Example :: File Bindy FTP</description>
 
     <properties>
-        <quarkus.platform.version>3.8.4.SP1-redhat-00001</quarkus.platform.version>
+        <quarkus.platform.version>3.15.1.SP1-temporary-redhat-00001</quarkus.platform.version>
         <camel-quarkus.platform.version>${quarkus.platform.version}</camel-quarkus.platform.version>
 
         <quarkus.platform.group-id>com.redhat.quarkus.platform</quarkus.platform.group-id>
@@ -43,14 +43,14 @@
         <maven.compiler.testTarget>${maven.compiler.target}</maven.compiler.testTarget>
         <maven.compiler.testSource>${maven.compiler.source}</maven.compiler.testSource>
 
-        <formatter-maven-plugin.version>2.23.0</formatter-maven-plugin.version>
+        <formatter-maven-plugin.version>2.24.1</formatter-maven-plugin.version>
         <groovy-maven-plugin.version>2.1.1</groovy-maven-plugin.version>
-        <impsort-maven-plugin.version>1.9.0</impsort-maven-plugin.version>
-        <license-maven-plugin.version>4.2</license-maven-plugin.version>
-        <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
-        <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
+        <impsort-maven-plugin.version>1.12.0</impsort-maven-plugin.version>
+        <license-maven-plugin.version>4.5</license-maven-plugin.version>
+        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
-        <maven-surefire-plugin.version>3.1.2</maven-surefire-plugin.version>
+        <maven-surefire-plugin.version>3.5.0</maven-surefire-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -133,6 +133,51 @@
         </dependency>
     </dependencies>
 
+    <repositories>
+        <repository>
+            <id>redhat-ga-repository</id>
+            <url>https://maven.repository.redhat.com/ga/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>redhat-earlyaccess-repository</id>
+            <url>https://maven.repository.redhat.com/earlyaccess/all/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>redhat-ga-repository</id>
+            <url>https://maven.repository.redhat.com/ga/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+        <pluginRepository>
+            <id>redhat-earlyaccess-repository</id>
+            <url>https://maven.repository.redhat.com/earlyaccess/all/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+
     <build>
         <pluginManagement>
             <plugins>
@@ -183,9 +228,9 @@
                     <version>${maven-surefire-plugin.version}</version>
                     <configuration>
                         <failIfNoTests>false</failIfNoTests>
-                        <systemProperties>
+                        <systemPropertyVariables>
                             <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-                        </systemProperties>
+                        </systemPropertyVariables>
                     </configuration>
                 </plugin>
 
@@ -210,7 +255,7 @@
                 <plugin>
                     <groupId>com.mycila</groupId>
                     <artifactId>license-maven-plugin</artifactId>
-                    <version>${license-maven-plugin}</version>
+                    <version>${license-maven-plugin.version}</version>
                     <configuration>
                         <failIfUnknown>true</failIfUnknown>
                         <header>${maven.multiModuleProjectDirectory}/header.txt</header>
@@ -227,8 +272,7 @@
                         <mapping>
                             <java>SLASHSTAR_STYLE</java>
                             <properties>CAMEL_PROPERTIES_STYLE</properties>
-                            <Dockerfile.jvm>CAMEL_PROPERTIES_STYLE</Dockerfile.jvm>
-                            <Dockerfile.native>CAMEL_PROPERTIES_STYLE</Dockerfile.native>
+                            <kt>SLASHSTAR_STYLE</kt>
                         </mapping>
                         <headerDefinitions>
                             <headerDefinition>${maven.multiModuleProjectDirectory}/license-properties-headerdefinition.xml</headerDefinition>
@@ -298,16 +342,22 @@
 
                                 Pattern pattern = Pattern.compile("app.kubernetes.io/version: .*")
 
-                                String sanitizedBasedir = project.basedir.path.replace('\\', '/')
-                                File file = new File("${sanitizedBasedir}/src/main/kubernetes/openshift.yml")
-                                String content = file.text
-                                Matcher matcher = pattern.matcher(content)
+                                ["kubernetes", "openshift"].each { k8sResource -&gt;
+                                    String sanitizedBasedir = project.basedir.path.replace('\\', '/')
+                                    File file = new File("${sanitizedBasedir}/src/main/kubernetes/${k8sResource}.yml")
+                                    if (!file.exists()) {
+                                        return
+                                    }
 
-                                if (matcher.find()) {
-                                    String updatedContent = matcher.replaceAll("app.kubernetes.io/version: ${project.version}")
-                                    if (updatedContent != content) {
-                                        log.info("Updating app.kubernetes.io/version label to ${project.version} in ${file.path}")
-                                        file.write(updatedContent)
+                                    String content = file.text
+                                    Matcher matcher = pattern.matcher(content)
+
+                                    if (matcher.find()) {
+                                        String updatedContent = matcher.replaceAll("app.kubernetes.io/version: ${project.version}")
+                                        if (updatedContent != content) {
+                                            log.info("Updating app.kubernetes.io/version label to ${project.version} in ${file.path}")
+                                            file.write(updatedContent)
+                                        }
                                     }
                                 }
                             </source>
@@ -318,51 +368,6 @@
         </plugins>
     </build>
 
-    <repositories>
-        <repository>
-            <id>redhat-ga-repository</id>
-            <url>https://maven.repository.redhat.com/ga/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-        <repository>
-            <id>redhat-earlyaccess-repository</id>
-            <url>https://maven.repository.redhat.com/earlyaccess/all/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>redhat-ga-repository</id>
-            <url>https://maven.repository.redhat.com/ga/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </pluginRepository>
-        <pluginRepository>
-            <id>redhat-earlyaccess-repository</id>
-            <url>https://maven.repository.redhat.com/earlyaccess/all/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </pluginRepository>
-    </pluginRepositories>
-
     <profiles>
         <profile>
             <id>native</id>
@@ -372,8 +377,7 @@
                 </property>
             </activation>
             <properties>
-                <quarkus.package.type>native</quarkus.package.type>
-                <quarkus.native.container-build>true</quarkus.native.container-build>
+                <quarkus.native.enabled>true</quarkus.native.enabled>
             </properties>
             <build>
                 <plugins>
@@ -391,6 +395,17 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
+            <id>skip-testcontainers-tests</id>
+            <activation>
+                <property>
+                    <name>skip-testcontainers-tests</name>
+                </property>
+            </activation>
+            <properties>
+                <skipTests>true</skipTests>
+            </properties>
         </profile>
     </profiles>
 
