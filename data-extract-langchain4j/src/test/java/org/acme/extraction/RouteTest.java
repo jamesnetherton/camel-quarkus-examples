@@ -63,7 +63,7 @@ public class RouteTest {
                 .when()
                 .get("/custom-pojo-store")
                 .then()
-                .statusCode(200)
+                .statusCode(200) 
                 // Assert values of the first extracted POJO
                 .body("pojos[0].customerSatisfied", is("true"))
                 .body("pojos[0].customerName", is("Sarah London"))

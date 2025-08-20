@@ -21,7 +21,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.acme.extraction.CustomPojoExtractionService.CustomPojo;
 import org.apache.camel.Handler;
 import org.jboss.logging.Logger;
 

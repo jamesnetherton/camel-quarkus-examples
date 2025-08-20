@@ -19,6 +19,10 @@ package org.acme.extraction;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.langchain4j.agent.Headers;
+
+import static org.acme.extraction.Langchain4jAgentConfiguration.AGENT_ID;
+import static org.acme.extraction.Langchain4jAgentConfiguration.AGENT_MEMORY_ID;
 
 @ApplicationScoped
 public class Routes extends RouteBuilder {
@@ -28,13 +32,21 @@ public class Routes extends RouteBuilder {
 
     @Override
     public void configure() {
+        getContext().getGlobalOptions().put("CamelJacksonTypeConverterToPojo", "true");
+        getContext().getGlobalOptions().put("CamelJacksonEnableTypeConverter", "true");
 
         // Consumes file documents that contain conversation transcripts (JSON format)
         from("file:target/transcripts?sortBy=file:name")
                 .log("A document has been received by the camel-quarkus-file extension: ${body}")
-                .setHeader("expectedDateFormat", constant("YYYY-MM-DD"))
-                // The CustomPojoExtractionService transforms the conversation transcript into a CustomPojoExtractionService.CustomPojo
-                .bean(CustomPojoExtractionService.class)
+                .setHeader("expectedDateFormat").constant("YYYY-MM-DD")
+                .setHeader("content").jsonpath("$.content")
+                .setHeader(Headers.MEMORY_ID).constant(AGENT_MEMORY_ID)
+                // Set up the prompt using the simple language to dynamically fill the prompt template
+                .setBody().simple(CustomPojo.CUSTOM_POJO_EXTRACT_PROMPT)
+                // Initiate a conversation with the LLM
+                .toF("langchain4j-agent:%s", AGENT_ID)
+                // Unmarshall the LLM response JSON to CustomStorePojo
+                .unmarshal().json()
                 // Store extracted CustomPojoExtractionService.CustomPojos objects into the CustomPojoStore for later inspection
                 .bean(customPojoStore);
 
