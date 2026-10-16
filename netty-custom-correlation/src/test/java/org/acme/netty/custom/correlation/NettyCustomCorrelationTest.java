@@ -17,9 +17,9 @@
 package org.acme.netty.custom.correlation;
 
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
+import io.quarkus.test.common.TestLog;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -30,10 +30,10 @@ import static org.awaitility.Awaitility.await;
 class NettyCustomCorrelationTest {
 
     @Test
-    public void testWithCorrelation() {
+    public void testWithCorrelation(TestLog testLog) {
         await().atMost(20L, TimeUnit.SECONDS).pollDelay(1, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
-                    String log = Files.readString(Paths.get("target/quarkus.log"));
+                    String log = Files.readString(testLog.getLogFilePath());
                     //we should receive both correlated and uncorrelated response
                     Assertions.assertTrue(log.contains("(correct reply)"));
                     Assertions.assertFalse(log.contains("(wrong reply)"));

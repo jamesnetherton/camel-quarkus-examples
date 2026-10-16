@@ -18,9 +18,9 @@ package org.acme.aws2.s3;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
+import io.quarkus.test.common.TestLog;
 import io.quarkus.test.common.WithTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Assertions;
@@ -33,10 +33,10 @@ import static org.awaitility.Awaitility.await;
 class Aws2S3Test {
 
     @Test
-    public void testSendAndReceive() {
+    public void testSendAndReceive(TestLog testLog) {
         await().atMost(10L, TimeUnit.SECONDS).pollDelay(1, TimeUnit.SECONDS)
                 .untilAsserted(() -> Assertions
-                        .assertTrue(new String(Files.readAllBytes(Paths.get("target/quarkus.log")), StandardCharsets.UTF_8)
+                        .assertTrue(new String(Files.readAllBytes(testLog.getLogFilePath()), StandardCharsets.UTF_8)
                                 .contains("Received body: Hello from Camel via aws2-s3!")));
     }
 }
